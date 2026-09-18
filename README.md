@@ -21,7 +21,47 @@ AI 只有这一条 MCP→本机 Bridge 入口；多人转发复用 Minecraft 自
 - `tests`：TypeScript、协议、Forge packet、路由、权限和几何测试。
 - `docs`：中文架构、安全和实机教程。
 
-## 构建
+## 普通用户快速开始
+
+### 准备环境
+
+- Minecraft Java Edition 1.20.1
+- Forge 47.4.10
+- Java 17
+- Node.js 20 或更高版本
+- Codex，并启用 MCP
+
+从 GitHub 获取 MCP Server：
+
+```powershell
+git clone https://github.com/cagedb1rd/minecraft-ai-world-builder.git
+cd minecraft-ai-world-builder
+npm install
+npm run build
+```
+
+从 GitHub Releases 下载 `ai_world_builder_bridge-0.1.0.jar`，放入 Minecraft 整合包的 `mods` 文件夹。如果仓库暂时还没有 Release，请按下面的“开发者构建”步骤自行生成 jar。房主和加入者都使用同一个 jar，不需要 Host 版和 Client 版两个文件。
+
+### 连接 Codex
+
+在项目根目录执行：
+
+```powershell
+codex mcp add minecraft-ai-builder -- node <项目根目录>\mcp-server\dist\index.js
+codex mcp list
+```
+
+将 `<项目根目录>` 替换成实际路径。MCP 只连接当前电脑的 `127.0.0.1:8765`，不需要填写房主 IP，也不需要配置 Tailscale、ZeroTier、SSH Tunnel 或远程 Bridge。
+
+如需改变本机端口，可设置 `AI_BRIDGE_PORT`；普通使用不需要设置额外环境变量。
+
+正常使用时不需要手动一直运行 `node dist/index.js`；Codex 会按照 MCP 配置启动它。只有排查问题时才手动启动：
+
+```powershell
+node <项目根目录>\mcp-server\dist\index.js
+```
+
+## 开发者构建
 
 ```powershell
 npm install
@@ -36,7 +76,7 @@ Bridge 产物：`bridge-mod/build/libs/ai_world_builder_bridge-0.1.0.jar`（面�
 
 安装前请使用上述命令重新生成该 jar；不要直接复用旧的 `build/` 缓存产物。
 
-## 安装和首次启动
+## 首次启动行为
 
 双方都把同一个 jar 放入各自整合包的 `mods` 目录，不区分 Host 版和 Client 版。
 
@@ -46,20 +86,21 @@ Bridge 产物：`bridge-mod/build/libs/ai_world_builder_bridge-0.1.0.jar`（面�
 
 MCP Server 会自动读取该文件。普通使用不需要填写任何远程连接参数。
 
-## GitHub 公开发布
+## 第一次使用
 
-源码仓库不提交本地认证 token、设计会话、Minecraft 存档、Gradle 缓存、`node_modules`、`dist` 或调试日志；这些内容已列入根目录 `.gitignore`。Bridge jar 建议作为 GitHub Release 附件发布，而不是提交到源码历史中。公开发布前请先运行 `npm test` 和 `bridge-mod\gradlew.bat clean build`，并检查暂存文件列表中没有个人路径或凭据。完整清单见 [`docs/public-release.md`](docs/public-release.md)。
+建议先在新建或备份后的测试世界中使用。第一次请求先要求预览：
 
-## Codex MCP 配置
+> 读取我的位置和前方地形，搜索当前整合包真实材料，设计一个双层日式乡村小屋。先创建设计会话、解析材料、编译并预览，不要直接执行。
 
-先在项目根目录完成 `npm run build`，然后注册本机 MCP：
+确认预览结果没有越界或覆盖风险后，再发送：
 
-```powershell
-codex mcp add minecraft-ai-builder -- node <项目根目录>\mcp-server\dist\index.js
-codex mcp list
-```
+> 批准当前设计并执行，使用分 Tick 建造。完成后告诉我 build status、buildId 和 transactionId。
 
-将 `<项目根目录>` 替换成你电脑上的实际项目路径。MCP Server 只会连接 `127.0.0.1:8765`。如需改变本机端口，可设置 `AI_BRIDGE_PORT`；日常启动不需要设置额外环境变量。
+建造完成后可以发送：
+
+> 撤销刚才的建筑。
+
+所有建筑请求都会经过服务端权限、边界校验、Transaction、分 Tick BuildQueue 和 Undo/Redo。
 
 ## 使用方式 A：我是房主
 
@@ -99,7 +140,8 @@ AI 操作者：
 ```toml
 enabled = true
 port = 8765
-playerRoles = ["玩家 UUID=OWNER", "受信任玩家 UUID=TRUSTED"]
+[bridge]
+playerRoles = ["<玩家 UUID>=OWNER", "<受信任玩家 UUID>=TRUSTED"]
 referencePlayers = ["*"]
 allowedDimensions = ["minecraft:overworld"]
 protectedRegions = []
@@ -137,6 +179,14 @@ ArchitecturalDesign 的 `components` 支持 `framed_wall`、`timber_frame_grid`�
 
 Create 普通注册方块自动支持；Create 高级铁路、列车、动力和物流能力只有在确切版本 Adapter 通过实际 API 验证后才会开放。
 
+## 常见问题
+
+- `ECONNREFUSED 127.0.0.1:8765`：Minecraft 尚未启动、Bridge Mod 没有成功加载，或安装的 jar 不是 Forge 47.4.10 版本。关闭游戏后重新安装 Release 中的 jar，再启动游戏。
+- `BRIDGE_HOST_UNAVAILABLE`：本机没有 Integrated Server，且当前 Minecraft 联机服务器没有安装同一个 Bridge Mod，或者联机握手尚未完成。
+- `PERMISSION_DENIED`：房主服务端没有在 `playerRoles` 中授权当前真实玩家 UUID，或请求超出了方块数量、半径、维度或保护区限制。
+- 读取不到材料：先调用 `list_mods`、`search_blocks` 和 `get_block_states`，只使用当前 Registry 中真实存在的方块，不要手写猜测的 Mod ID。
+- 建筑执行前被阻止：先使用 `preview_architectural_design` 或 `preview_build`，检查覆盖风险和 BlockEntity 警告，再批准执行。
+
 ## 测试
 
 无需 Minecraft 的验证：
@@ -154,4 +204,4 @@ cd bridge-mod
 npm run integration
 ```
 
-完整流程见：[实机测试教程](docs/integration-test.md)、[安全说明](docs/security.md)、[架构说明](docs/architecture.md)、[公开发布清单](docs/public-release.md) 和 [续接说明](CONTINUATION.md)。
+完整流程见：[实机测试教程](docs/integration-test.md)、[安全说明](docs/security.md)、[架构说明](docs/architecture.md)。
