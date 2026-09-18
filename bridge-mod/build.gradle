@@ -1,0 +1,34 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
+}
+version = mod_version
+group = mod_group_id
+base { archivesName = mod_id }
+// Keep the normal build/ location, while allowing sandboxed CI to redirect generated output.
+def bridgeBuildDir = providers.gradleProperty('bridgeBuildDir')
+if (bridgeBuildDir.isPresent()) layout.buildDirectory.set(project.file(bridgeBuildDir.get()))
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+    runs {
+        server { workingDirectory project.file('run'); args '--nogui'; mods { ai_world_builder_bridge { source sourceSets.main } } }
+        client { workingDirectory project.file('run'); mods { ai_world_builder_bridge { source sourceSets.main } } }
+    }
+}
+repositories { }
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+tasks.named('test', Test) { useJUnitPlatform() }
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [minecraft_version: minecraft_version, forge_version: forge_version, mod_id: mod_id, mod_version: mod_version]
+    inputs.properties replaceProperties
+    filesMatching(['META-INF/mods.toml']) { expand replaceProperties + [project: project] }
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+jar { manifest { attributes(['Specification-Title': mod_id, 'Specification-Version': '1', 'Implementation-Version': project.jar.archiveVersion]) } }

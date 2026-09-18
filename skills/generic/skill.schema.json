@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Minecraft AI Builder Skill",
+  "type": "object",
+  "required": ["skillId", "modId", "modVersion", "minecraftVersion", "description", "requirements", "constraints", "procedure", "validated"],
+  "properties": {
+    "skillId": { "type": "string", "pattern": "^[a-z0-9_.-]+$" },
+    "modId": { "type": "string" }, "modVersion": { "type": "string" }, "minecraftVersion": { "type": "string" },
+    "description": { "type": "string" }, "requirements": { "type": "array", "items": { "type": "string" } },
+    "constraints": { "type": "array", "items": { "type": "string" } }, "procedure": { "type": "array", "items": { "type": "string" } },
+    "validated": { "type": "boolean" }, "validationResult": { "type": "string" }, "lastValidatedAt": { "type": "string", "format": "date-time" },
+    "sources": { "type": "array", "items": { "type": "string" } },
+    "validationStatus": { "enum": ["validated", "needs_revalidation", "unvalidated"] }
+  }, "additionalProperties": false
+}

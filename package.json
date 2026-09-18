@@ -1,0 +1,11 @@
+{
+  "name": "minecraft-ai-world-builder",
+  "private": true,
+  "workspaces": ["shared-protocol", "mcp-server"],
+  "scripts": {
+    "build": "npm run build -w @minecraft-ai-builder/shared-protocol && npm run build -w @minecraft-ai-builder/mcp-server",
+    "integration": "node tests/integration-smoke.mjs",
+    "test": "npm run build && npm run test -w @minecraft-ai-builder/shared-protocol && npm run test -w @minecraft-ai-builder/mcp-server && node tests/protocol-parity.mjs",
+    "typecheck": "npm run typecheck -w @minecraft-ai-builder/shared-protocol && npm run build -w @minecraft-ai-builder/shared-protocol && npm run typecheck -w @minecraft-ai-builder/mcp-server"
+  }
+}
